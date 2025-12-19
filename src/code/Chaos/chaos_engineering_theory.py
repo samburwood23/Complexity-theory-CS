@@ -483,4 +483,197 @@ class ComplexityVisualizer:
         for confidence in confidence_levels:
             delta = 1 - confidence
             sample_size = np.log(2/delta) / (2 * epsilon**2)
-            ax.axhline(sample_
+            ax.axhline(sample_size, linestyle='--',
+                      label=f'{int(confidence*100)}% confidence ({int(sample_size)} samples)')
+
+        ax.set_xlabel('Number of System Components')
+        ax.set_ylabel('Required Test Samples')
+        ax.set_title('Sample Complexity for Chaos Testing\n(Hoeffding Bound, ε=0.05)')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+        # Plot 3: Expected cascade size vs propagation probability
+        ax = axes[1, 0]
+        propagation_probs = np.linspace(0, 0.6, 50)
+        avg_degree = 4  # Example average degree
+
+        cascade_sizes_subcritical = []
+        cascade_sizes_critical = []
+
+        for p in propagation_probs:
+            critical_threshold = 1 / avg_degree
+            if p < critical_threshold:
+                # Sub-critical regime: localized failure
+                expected_size = 1 + p * avg_degree
+            else:
+                # Super-critical regime: giant component
+                # Using mean-field approximation
+                expected_size = 1 / (1 - p * avg_degree) if p * avg_degree < 1 else 50
+
+            cascade_sizes_subcritical.append(min(expected_size, 50))
+
+        ax.plot(propagation_probs, cascade_sizes_subcritical, 'b-', linewidth=2)
+        ax.axvline(1/avg_degree, color='r', linestyle='--',
+                  label=f'Critical threshold: {1/avg_degree:.3f}')
+        ax.axhspan(0, 5, alpha=0.2, color='green', label='Localized failures')
+        ax.axhspan(5, 50, alpha=0.2, color='red', label='System-wide cascades')
+        ax.set_xlabel('Propagation Probability')
+        ax.set_ylabel('Expected Cascade Size')
+        ax.set_title('Phase Transition in Failure Propagation')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+        # Plot 4: Recovery time vs system size
+        ax = axes[1, 1]
+        system_sizes = np.array(list(node_counts))
+
+        # Different recovery models
+        recovery_linear = system_sizes * 0.5
+        recovery_log = np.log(system_sizes) * 5
+        recovery_sqrt = np.sqrt(system_sizes) * 2
+
+        ax.plot(system_sizes, recovery_linear, 'r-', marker='o', label='O(n) - Sequential')
+        ax.plot(system_sizes, recovery_log, 'g-', marker='s', label='O(log n) - Hierarchical')
+        ax.plot(system_sizes, recovery_sqrt, 'b-', marker='^', label='O(√n) - Parallel')
+
+        ax.set_xlabel('Number of System Components')
+        ax.set_ylabel('Recovery Time (arbitrary units)')
+        ax.set_title('Recovery Time Complexity')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        return fig
+
+
+# Demonstration and Example Usage
+def demonstrate_chaos_engineering_theory():
+    """
+    Complete demonstration of the chaos engineering theory toolkit
+    """
+    print("=" * 80)
+    print("CHAOS ENGINEERING THEORY DEMONSTRATION")
+    print("=" * 80)
+
+    # Part 1: Lyapunov Stability Analysis
+    print("\n1. LYAPUNOV STABILITY ANALYSIS")
+    print("-" * 80)
+
+    equilibrium = SystemMetrics(
+        latency_ms=500,
+        error_rate=0.01,
+        throughput=5000,
+        cpu_utilization=0.5,
+        memory_utilization=0.5
+    )
+
+    analyzer = LyapunovStabilityAnalyzer(equilibrium)
+
+    # Test different perturbations
+    test_states = [
+        ("Minor latency spike", SystemMetrics(600, 0.01, 5000, 0.5, 0.5)),
+        ("Error rate increase", SystemMetrics(500, 0.05, 5000, 0.5, 0.5)),
+        ("Severe degradation", SystemMetrics(1500, 0.15, 3000, 0.8, 0.8)),
+    ]
+
+    for name, state in test_states:
+        is_stable, V = analyzer.is_stable(state)
+        recovery_time = analyzer.predict_recovery_time(state)
+
+        print(f"\n{name}:")
+        print(f"  Lyapunov value: {V:.4f}")
+        print(f"  Stable: {is_stable}")
+        print(f"  Predicted recovery time: {recovery_time:.2f} seconds")
+
+    # Part 2: Cascade Failure Modeling
+    print("\n\n2. CASCADE FAILURE MODELING")
+    print("-" * 80)
+
+    cascade_model = CascadeFailureModel(num_nodes=50, connection_probability=0.3)
+
+    print(f"System initialized:")
+    print(f"  Nodes: {len(cascade_model.graph.nodes())}")
+    print(f"  Edges: {len(cascade_model.graph.edges())}")
+    print(f"  Average degree: {np.mean([d for _, d in cascade_model.graph.degree()]):.2f}")
+
+    # Inject failure at a random node
+    initial_failure = 5
+    affected = cascade_model.inject_failure(initial_failure)
+
+    print(f"\nFailure injection at node {initial_failure}:")
+    print(f"  Total nodes affected: {len(affected)}")
+    print(f"  Cascade amplification: {len(affected)}x")
+
+    metrics = cascade_model.calculate_resilience_metrics()
+    print(f"\nResilience metrics:")
+    for key, value in metrics.items():
+        print(f"  {key}: {value:.4f}")
+
+    # Part 3: Perturbation Strategies
+    print("\n\n3. PERTURBATION STRATEGY ANALYSIS")
+    print("-" * 80)
+
+    complexity = PerturbationStrategies.calculate_perturbation_complexity(
+        system_size=10,
+        failure_modes=3
+    )
+
+    print("Chaos testing complexity:")
+    for key, value in complexity.items():
+        print(f"  {key}: {value}")
+
+    strategies = PerturbationStrategies.generate_failure_injection_strategy(
+        cascade_model.graph,
+        budget=5
+    )
+
+    print("\nFailure injection strategies:")
+    for strategy_name, nodes in strategies:
+        print(f"  {strategy_name}: {nodes[:5]}")
+
+    # Part 4: Controlled Experiment
+    print("\n\n4. CONTROLLED CHAOS EXPERIMENT")
+    print("-" * 80)
+
+    orchestrator = ChaosExperimentOrchestrator(cascade_model)
+    result = orchestrator.run_controlled_experiment([3, 7, 12])
+
+    print("Experiment results:")
+    for key, value in result.items():
+        if isinstance(value, list):
+            print(f"  {key}: {value[:5]}{'...' if len(value) > 5 else ''}")
+        else:
+            print(f"  {key}: {value}")
+
+    print("\n" + "=" * 80)
+    print("Demonstration complete. Generating visualizations...")
+    print("=" * 80)
+
+    return analyzer, cascade_model, orchestrator
+
+
+if __name__ == "__main__":
+    # Run demonstration
+    analyzer, cascade_model, orchestrator = demonstrate_chaos_engineering_theory()
+
+    # Generate visualizations
+    print("\nGenerating visualizations...")
+
+    # Stability basin plot
+    fig1 = ComplexityVisualizer.plot_stability_basin(analyzer)
+    fig1.savefig('stability_basin.png', dpi=150, bbox_inches='tight')
+    print("✓ Saved: stability_basin.png")
+
+    # Cascade dynamics plot
+    failure_history = [cascade_model.inject_failure(i) for i in range(5)]
+    fig2 = ComplexityVisualizer.plot_cascade_dynamics(cascade_model, failure_history)
+    fig2.savefig('cascade_dynamics.png', dpi=150, bbox_inches='tight')
+    print("✓ Saved: cascade_dynamics.png")
+
+    # Complexity scaling plot
+    fig3 = ComplexityVisualizer.plot_complexity_scaling(max_nodes=20)
+    fig3.savefig('complexity_scaling.png', dpi=150, bbox_inches='tight')
+    print("✓ Saved: complexity_scaling.png")
+
+    print("\nAll visualizations generated successfully!")
+    print("Run with Python to see the chaos engineering theory in action.")
